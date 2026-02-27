@@ -1,17 +1,19 @@
 public class MyChomp {
+
     public static void main(String[] args) {
 
-    }
+        for (int c1 = 3; c1 >= 0; c1--) {
+            for (int c2 = c1; c2 >= 0; c2--) {
+                for (int c3 = c2; c3 >= 0; c3--) {
 
+                    // skip 0.0.0
+                    if (c1 != 0 || c2 != 0 || c3 != 0) {
+                        System.out.println(c1 + "." + c2 + "." + c3);
+                    }
 
-    //todo: print out all of the 3x3 boards
-    //no souting 19 times
-
-
-    public MyChomp(){
-        //System.out.println("3.3.3");
-       // for loop to print it out
-        //maybe do an if = 3.3.0 -0.1.0 etc.
-        // for all boards determine if 1.0.0 is one move away
+                }
+            }
+        }
+//
     }
 }
