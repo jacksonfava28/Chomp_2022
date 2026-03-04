@@ -47,3 +47,9 @@ public class MyChomp {
         return false;
     }
 }
+
+// add state to win boards if 1.0.0 is in possible boards
+// todo: define win and lose boards (win is boards that have lose boards in them and lose boards are ones that have win boards in them)
+// todo: add state to win boards if lose boards are in possible boards
+// todo: if all possible boards are win boards add state to lose boards
+// todo: if 1.0.0 is in possible boards = win board, if all boards in possible = win board the state = lose board
