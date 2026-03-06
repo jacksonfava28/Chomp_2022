@@ -68,3 +68,9 @@ public class MyChomp {
         return false;
     }
 }
+
+
+
+
+// Todo: find all subsequent boards
+// sidebar: put it before the is winning method as to have it work properly
