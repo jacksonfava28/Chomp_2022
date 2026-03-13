@@ -97,3 +97,7 @@ public class MyChomp {
         }
     }
 }
+
+
+// idea: for the button if in a winning board have it pick any boards in possible moves that are lose boards
+// idea: if the board is a losing board have it pick the board with the most tiles left as to hold onto the chance as long as possible
