@@ -97,7 +97,7 @@ public class MyChomp {
         }
     }
 }
-//hjeeuiwbcuerib
+//have it deliniate what makes it winning or losing and atatch a move to it so it can play it
 
 // idea: for the button if in a winning board have it pick any boards in possible moves that are lose boards
 // idea: if the board is a losing board have it pick the board with the most tiles left as to hold onto the chance as long as possible
