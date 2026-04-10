@@ -8,16 +8,18 @@ public class MyPlayer {
     private final int COLS = 3;
 
     // boardResults[c1][c2][c3]
-    private static boolean[][][] boardResults = new boolean[4][4][4];
+    private static boolean[][][] boardResults =
+            new boolean[3][3][3];
 
     public MyPlayer() {
         precomputeWinningBoards();
     }
 
-    // ---------------- PRECOMPUTE ----------------
+    // ---------------- PRECOMPUTE WINNING BOARDS ----------------
     private void precomputeWinningBoards() {
 
-        boardResults[1][0][0] = false; // poison cookie
+        // poison cookie position is losing
+        boardResults[1][0][0] = false;
 
         for (int sum = 1; sum <= 9; sum++) {
             for (int c1 = 0; c1 <= 3; c1++) {
@@ -35,52 +37,57 @@ public class MyPlayer {
         }
     }
 
-    // ---------------- WINNING CHECK ----------------
+    // ---------------- WINNING TEST ----------------
     private boolean computeIsWinning(int c1, int c2, int c3) {
 
         int[] board = {c1, c2, c3};
 
         for (int col = 0; col < COLS; col++) {
-            for (int r = 0; r < board[col]; r++) {
+            for (int newHeight = 0;
+                 newHeight < board[col];
+                 newHeight++) {
 
                 int[] newBoard = board.clone();
 
-                for (int i = col; i < COLS; i++) {
-                    newBoard[i] = Math.min(newBoard[i], r);
-                }
+                for (int i = col; i < COLS; i++)
+                    newBoard[i] =
+                            Math.min(newBoard[i], newHeight);
 
                 int[] norm = normalizeBoard(newBoard);
 
-                if (!boardResults[norm[0]][norm[1]][norm[2]])
+                if (!boardResults[norm[0]]
+                        [norm[1]]
+                        [norm[2]])
                     return true;
             }
         }
         return false;
     }
 
-    // ---------------- NORMALIZE ----------------
+    // ---------------- NORMALIZE BOARD ----------------
     private int[] normalizeBoard(int[] heights) {
 
         int[] sorted = heights.clone();
 
-        for (int i = 0; i < 2; i++) {
-            for (int j = i + 1; j < 3; j++) {
+        for (int i = 0; i < 2; i++)
+            for (int j = i + 1; j < 3; j++)
                 if (sorted[i] < sorted[j]) {
                     int t = sorted[i];
                     sorted[i] = sorted[j];
                     sorted[j] = t;
                 }
-            }
-        }
+
         return sorted;
     }
 
-    // ---------------- GET HEIGHTS ----------------
+    // ---------------- READ CURRENT BOARD ----------------
+    // Counts ALL remaining cookies in each column
     private int[] getColumnHeights() {
 
         int[] heights = new int[COLS];
 
         for (int c = 0; c < COLS; c++) {
+
             int count = 0;
 
             for (int r = 0; r < ROWS; r++) {
@@ -104,33 +111,56 @@ public class MyPlayer {
         Point bestMove = null;
         int maxTiles = -1;
 
-        // Try every legal bite
         for (int c = 0; c < COLS; c++) {
-            for (int r = 0; r < heights[c]; r++) {
 
-                // skip poison cookie
-                if (r == 0 && c == 0) continue;
+            for (int newHeight = 0;
+                 newHeight < heights[c];
+                 newHeight++) {
+
+                // never eat poison intentionally
+                if (c == 0 && newHeight == 0) continue;
 
                 int[] newHeights = heights.clone();
 
                 // simulate chomp
                 for (int i = c; i < COLS; i++)
-                    newHeights[i] = Math.min(newHeights[i], r);
+                    newHeights[i] =
+                            Math.min(newHeights[i], newHeight);
 
-                int[] newNorm = normalizeBoard(newHeights);
+                int[] newNorm =
+                        normalizeBoard(newHeights);
 
                 boolean nextWinning =
                         boardResults[newNorm[0]]
                                 [newNorm[1]]
                                 [newNorm[2]];
 
-                // PERFECT PLAY
+                /*
+                 * Convert solver move → GUI coordinate
+                 *
+                 * heights[c] = current column height
+                 * newHeight  = height AFTER bite
+                 */
+                int oldHeight = heights[c];
+
+                int rowClicked =
+                        ROWS - oldHeight + newHeight;
+
+                if (rowClicked < 0 ||
+                        rowClicked >= ROWS)
+                    continue;
+
+                if (gameBoard[rowClicked][c] == null)
+                    continue;
+
+                //  WINNING STRATEGY
                 if (winning && !nextWinning) {
-                    return new Point(r, c);
+                    return new Point(rowClicked, c);
                 }
 
-                // STALL IF LOSING
+                //  LOSING STRATEGY (stall)
                 if (!winning) {
+
                     int tiles =
                             newNorm[0]
                                     + newNorm[1]
@@ -138,7 +168,8 @@ public class MyPlayer {
 
                     if (tiles > maxTiles) {
                         maxTiles = tiles;
-                        bestMove = new Point(r, c);
+                        bestMove =
+                                new Point(rowClicked, c);
                     }
                 }
             }
@@ -147,13 +178,14 @@ public class MyPlayer {
         if (bestMove != null)
             return bestMove;
 
-        // fallback safety move
-        for (int c = 0; c < COLS; c++)
-            for (int r = 0; r < heights[c]; r++)
-                if (!(r == 0 && c == 0))
+        // fallback move
+        for (int r = ROWS - 1; r >= 0; r--)
+            for (int c = 0; c < COLS; c++)
+                if (gameBoard[r][c] != null &&
+                        !(r == ROWS - 1 && c == 0))
                     return new Point(r, c);
 
-        return new Point(0,1);
+        return new Point(ROWS - 1, 1);
     }
 
     // ---------------- PUBLIC MOVE ----------------
@@ -162,6 +194,13 @@ public class MyPlayer {
         gameBoard = pBoard;
 
         int[] heights = getColumnHeights();
+
+        // DEBUG (you can remove later)
+        System.out.println(
+                heights[0] + "." +
+                        heights[1] + "." +
+                        heights[2]
+        );
 
         return chooseMove(heights);
     }
