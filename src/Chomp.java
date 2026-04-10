@@ -14,7 +14,7 @@ import javax.swing.*;
 //Keyboard and Mouse
 import java.awt.event.*;
 
-//*******************************************************************************
+
 // Class Definition Section
 
 public class Chomp implements Runnable, MouseListener {
