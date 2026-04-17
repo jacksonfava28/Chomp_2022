@@ -17,7 +17,7 @@ public class MyChomp {
             resultBoard = r;
         }
     }
-   //jb jbjkb
+
     // ---------------- MAIN ----------------
     public static void main(String[] args) {
 

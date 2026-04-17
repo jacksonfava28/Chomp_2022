@@ -1,4 +1,5 @@
 import java.awt.*;
+import java.util.Arrays;
 
 public class MyPlayer {
 
@@ -8,8 +9,8 @@ public class MyPlayer {
     private final int COLS = 3;
 
     // boardResults[c1][c2][c3]
-    private static boolean[][][] boardResults =
-            new boolean[3][3][3];
+    private boolean[][][] boardResults =
+            new boolean[4][4][4];
 
     public MyPlayer() {
         precomputeWinningBoards();
@@ -91,13 +92,13 @@ public class MyPlayer {
             int count = 0;
 
             for (int r = 0; r < ROWS; r++) {
-                if (gameBoard[r][c] != null)
+                if (gameBoard[r][c].isAlive)
                     count++;
             }
 
             heights[c] = count;
         }
-
+        System.out.println(Arrays.toString(heights));
         return heights;
     }
 
@@ -150,7 +151,7 @@ public class MyPlayer {
                         rowClicked >= ROWS)
                     continue;
 
-                if (gameBoard[rowClicked][c] == null)
+                if (!gameBoard[rowClicked][c].isAlive)
                     continue;
 
                 //  WINNING STRATEGY
