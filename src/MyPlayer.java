@@ -1,220 +1,168 @@
-import java.awt.*;
+import java.awt.Point;
 import java.util.Arrays;
 
 public class MyPlayer {
 
-    // reference to GUI board
-    public Chip[][] gameBoard;
 
-    private final int ROWS = 3;
-    private final int COLS = 3;
+      // MAIN MOVE FUNCTION (CALLED BY GAME)
 
-    // boardResults[c1][c2][c3]
-    // true  = winning position
-    // false = losing position
-    private boolean[][][] boardResults =
-            new boolean[4][4][4];
+    public Point move(Chip[][] board) {
 
-    public MyPlayer() {
-        // precompute all positions once
-        precomputeWinningBoards();
-    }
+        int[] heights = computeHeights(board);
 
-    // ---------------- PRECOMPUTE WINNING BOARDS ----------------
-    private void precomputeWinningBoards() {
+        System.out.println("Heights: " + Arrays.toString(heights));
+        printHeights(heights);
 
-        // poison cookie alone → losing
-        boardResults[1][0][0] = false;
+        Point winningMove = findWinningMove(heights);
 
-        // compute positions by increasing size
-        // (dynamic programming)
-        for (int sum = 1; sum <= 9; sum++) {
-            for (int c1 = 0; c1 <= 3; c1++) {
-                for (int c2 = 0; c2 <= c1; c2++) {
-                    for (int c3 = 0; c3 <= c2; c3++) {
-
-                        if (c1 + c2 + c3 != sum) continue;
-                        if (c1 == 1 && c2 == 0 && c3 == 0) continue;
-
-                        boardResults[c1][c2][c3] =
-                                computeIsWinning(c1, c2, c3);
-                    }
-                }
-            }
+        if (winningMove != null) {
+            System.out.println("Winning move -> "
+                    + winningMove.x + "," + winningMove.y);
+            return winningMove;
         }
+
+        Point fallback = fallbackMove(heights);
+
+        System.out.println("Fallback move -> "
+                + fallback.x + "," + fallback.y);
+
+        return fallback;
     }
 
-    // ---------------- WINNING TEST ----------------
-    // same logic as MyChomp solver
-    private boolean computeIsWinning(int c1, int c2, int c3) {
 
-        int[] board = {c1, c2, c3};
+      // CONVERT GUI BOARD → HEIGHTS
 
-        for (int col = 0; col < COLS; col++) {
-            for (int newHeight = 0;
-                 newHeight < board[col];
-                 newHeight++) {
+    private int[] computeHeights(Chip[][] board) {
 
-                int[] newBoard = board.clone();
+        int rows = board.length;
+        int cols = board[0].length;
 
-                // simulate bite
-                for (int i = col; i < COLS; i++)
-                    newBoard[i] =
-                            Math.min(newBoard[i], newHeight);
+        int[] heights = new int[rows];
 
-                int[] norm = normalizeBoard(newBoard);
-
-                // winning if opponent gets losing board
-                if (!boardResults[norm[0]]
-                        [norm[1]]
-                        [norm[2]])
-                    return true;
-            }
-        }
-        return false;
-    }
-
-    // ---------------- NORMALIZE BOARD ----------------
-    // sorts columns descending so states match solver
-    private int[] normalizeBoard(int[] heights) {
-
-        int[] sorted = heights.clone();
-
-        for (int i = 0; i < 2; i++)
-            for (int j = i + 1; j < 3; j++)
-                if (sorted[i] < sorted[j]) {
-                    int t = sorted[i];
-                    sorted[i] = sorted[j];
-                    sorted[j] = t;
-                }
-
-        return sorted;
-    }
-
-    // ---------------- READ CURRENT BOARD ----------------
-    // counts how many cookies remain in each column
-    private int[] getColumnHeights() {
-
-        int[] heights = new int[COLS];
-
-        for (int c = 0; c < COLS; c++) {
+        for (int r = 0; r < rows; r++) {
 
             int count = 0;
 
-            for (int r = 0; r < ROWS; r++) {
-                if (gameBoard[r][c].isAlive)
+            for (int c = 0; c < cols; c++) {
+                if (board[r][c] != null &&
+                        board[r][c].isAlive)
                     count++;
             }
 
-            heights[c] = count;
+            heights[r] = count;
         }
 
-        System.out.println(Arrays.toString(heights));
         return heights;
     }
 
-    // ---------------- CHOOSE MOVE ----------------
-    private Point chooseMove(int[] heights) {
 
-        int[] norm = normalizeBoard(heights);
 
-        boolean winning =
-                boardResults[norm[0]][norm[1]][norm[2]];
+     //  FIND WINNING MOVE
 
-        Point bestMove = null;
-        int maxTiles = -1;
+    private Point findWinningMove(int[] heights) {
 
-        for (int c = 0; c < COLS; c++) {
+        for (int r = 0; r < heights.length; r++) {
 
-            for (int newHeight = 0;
-                 newHeight < heights[c];
-                 newHeight++) {
+            for (int c = 0; c < heights[r]; c++) {
 
-                // never intentionally eat poison
-                if (c == 0 && newHeight == 0) continue;
-
-                int[] newHeights = heights.clone();
-
-                // simulate move
-                for (int i = c; i < COLS; i++)
-                    newHeights[i] =
-                            Math.min(newHeights[i], newHeight);
-
-                int[] newNorm =
-                        normalizeBoard(newHeights);
-
-                boolean nextWinning =
-                        boardResults[newNorm[0]]
-                                [newNorm[1]]
-                                [newNorm[2]];
-
-                // convert solver move → GUI click position
-                int oldHeight = heights[c];
-
-                int rowClicked =
-                        ROWS - oldHeight + newHeight;
-
-                // ignore invalid clicks
-                if (rowClicked < 0 ||
-                        rowClicked >= ROWS)
+                // never eat poison
+                if (r == 0 && c == 0)
                     continue;
 
-                if (!gameBoard[rowClicked][c].isAlive)
-                    continue;
+                int[] next = simulateMove(heights, r, c);
 
-                // PERFECT PLAY:
-                // move opponent into losing position
-                if (winning && !nextWinning) {
-                    return new Point(rowClicked, c);
-                }
+                System.out.println(
+                        "Try move " + r + "," + c +
+                                " -> " + Arrays.toString(next));
 
-                // LOSING POSITION:
-                // delay loss as long as possible
-                if (!winning) {
-
-                    int tiles =
-                            newNorm[0]
-                                    + newNorm[1]
-                                    + newNorm[2];
-
-                    if (tiles > maxTiles) {
-                        maxTiles = tiles;
-                        bestMove =
-                                new Point(rowClicked, c);
-                    }
-                }
+                if (isLosingPosition(next))
+                    return new Point(r, c);
             }
         }
 
-        if (bestMove != null)
-            return bestMove;
-
-        // emergency fallback move
-        for (int r = ROWS - 1; r >= 0; r--)
-            for (int c = 0; c < COLS; c++)
-                if (gameBoard[r][c] != null &&
-                        !(r == ROWS - 1 && c == 0))
-                    return new Point(r, c);
-
-        // final safety return
-        return new Point(ROWS - 1, 1);
+        return null;
     }
 
-    // ---------------- PUBLIC MOVE ----------------
-    // called by game engine
-    public Point move(Chip[][] pBoard) {
 
-        gameBoard = pBoard;
 
-        int[] heights = getColumnHeights();
+      // SIMULATE CHOMP MOVE
 
-        // debug print
-        System.out.println(
-                heights[0] + "." +
-                        heights[1] + "." +
-                        heights[2]
-        );
+    private int[] simulateMove(int[] heights, int r, int c) {
 
-        return chooseMove(heights);
+        int[] copy = heights.clone();
+
+        for (int i = r; i < copy.length; i++) {
+            copy[i] = Math.min(copy[i], c);
+        }
+
+        return copy;
+    }
+
+
+
+    //   LOSING POSITION CHECK
+
+    private boolean isLosingPosition(int[] heights) {
+
+        // poison only
+        if (heights[0] == 1) {
+            boolean empty = true;
+
+            for (int i = 1; i < heights.length; i++)
+                if (heights[i] != 0)
+                    empty = false;
+
+            if (empty)
+                return true;
+        }
+
+        // opponent has winning reply?
+        for (int r = 0; r < heights.length; r++) {
+
+            for (int c = 0; c < heights[r]; c++) {
+
+                if (r == 0 && c == 0)
+                    continue;
+
+                int[] next = simulateMove(heights, r, c);
+
+                if (isLosingPosition(next))
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+
+
+      // SAFE FALLBACK MOVE
+
+    private Point fallbackMove(int[] heights) {
+
+        for (int r = heights.length - 1; r >= 0; r--) {
+            if (heights[r] > 0)
+                return new Point(r, heights[r] - 1);
+        }
+
+        return new Point(1,1);
+    }
+
+
+
+       //PRINT CHEAT SHEET FORMAT
+
+    private void printHeights(int[] heights) {
+
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < heights.length; i++) {
+            sb.append(heights[i]);
+
+            if (i < heights.length - 1)
+                sb.append(".");
+        }
+
+        System.out.println(sb.toString());
     }
 }
