@@ -336,7 +336,7 @@ public class Chomp implements Runnable, MouseListener {
             }
         });
 
-
+// got 3x3 working
         // randomBoard.setPreferredSize(new Dimension(200,50));
         myChomp = new JButton("My Player");
         myChomp.setFont(new Font("Optima", Font.BOLD, 25));
