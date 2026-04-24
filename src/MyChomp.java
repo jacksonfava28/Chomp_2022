@@ -2,212 +2,115 @@ import java.util.HashMap;
 
 public class MyChomp {
 
-    // Stores whether a board position is winning (true)
-    // or losing (false)
-    // Key format: "c1.c2.c3"
-    static HashMap<String, Boolean> boardResults = new HashMap<>();
+    // memoization: board string -> losing or not
+    HashMap<String, Boolean> memo = new HashMap<>();
 
-    // ---------------- MOVE CLASS ----------------
-    // Represents one possible move choice
-    static class Move {
-        int col;          // column clicked
-        int height;       // new height after chomp
-        String resultBoard; // resulting board string
 
-        Move(int c, int h, String r) {
-            col = c;
-            height = h;
-            resultBoard = r;
-        }
-    }
+    // convert height array to key
+    private String key(int[] h) {
 
-    // ---------------- MAIN ----------------
-    public static void main(String[] args) {
+        String s = "";
 
-        // Base losing position:
-        // only poison cookie remains
-        boardResults.put("1.0.0", false);
+        for (int i = 0; i < h.length; i++) {
 
-        // Generate ALL valid board shapes
-        // (columns must be non-increasing)
-        for (int c1 = 0; c1 <= 3; c1++) {
-            for (int c2 = 0; c2 <= c1; c2++) {
-                for (int c3 = 0; c3 <= c2; c3++) {
+            s += h[i];
 
-                    // ignore empty board
-                    if (c1 == 0 && c2 == 0 && c3 == 0)
-                        continue;
-
-                    String key = c1 + "." + c2 + "." + c3;
-
-                    // already known base case
-                    if (key.equals("1.0.0")) {
-                        System.out.println(key + " : Losing (base case)");
-                        continue;
-                    }
-
-                    // determine if position is winning
-                    boolean winning = isWinning(c1, c2, c3);
-                    boardResults.put(key, winning);
-
-                    // print result
-                    if (winning)
-                        System.out.println(key + " : Winning");
-                    else
-                        System.out.println(key + " : Losing");
-
-                    // show all reachable boards
-                    System.out.println("Moves to:");
-                    findNextBoards(c1, c2, c3);
-                    System.out.println();
-                }
-            }
+            if (i < h.length - 1)
+                s += ".";
         }
 
-        // ---------- TEST SOLVER ----------
-        // Ask AI for best move from starting board
-        Move best = chooseMove(3,3,3);
-
-        System.out.println("AI chooses move:");
-        System.out.println(
-                "(" + best.col + "," + best.height + ") -> "
-                        + best.resultBoard
-        );
+        return s;
     }
 
-    // ---------------- WINNING CHECK ----------------
-    // A board is winning if ANY legal move
-    // leads to a losing board.
-    public static boolean isWinning(int c1, int c2, int c3) {
 
-        int[] board = {c1, c2, c3};
+    // simulate move using SAME logic as your GUI updateBoard()
+    private int[] simulateMove(int[] h, int row, int col) {
 
-        // try every column
-        for (int col = 0; col < 3; col++) {
+        int[] copy = h.clone();
 
-            // try every smaller height
-            for (int height = 0; height < board[col]; height++) {
+        for (int c = col; c < copy.length; c++) {
 
-                // simulate chomp
-                int[] newBoard = board.clone();
-
-                // everything to the right is reduced
-                for (int i = col; i < 3; i++) {
-                    newBoard[i] = Math.min(newBoard[i], height);
-                }
-
-                int n1 = newBoard[0];
-                int n2 = newBoard[1];
-                int n3 = newBoard[2];
-
-                // ensure valid board ordering
-                if (n1 >= n2 && n2 >= n3) {
-
-                    String nextKey = n1 + "." + n2 + "." + n3;
-
-                    Boolean result = boardResults.get(nextKey);
-
-                    // WINNING RULE:
-                    // if we can move opponent to losing position
-                    if (result != null && result == false) {
-                        return true;
-                    }
-                }
-            }
+            copy[c] = Math.min(copy[c], row);
         }
 
-        // no winning move found
-        return false;
+        return copy;
     }
 
-    // ---------------- PRINT MOVES ----------------
-    // Displays every possible move from a board
-    public static void findNextBoards(int c1, int c2, int c3) {
 
-        int[] board = {c1, c2, c3};
+    // check losing position
+    public boolean isLosingPosition(int[] h) {
 
-        for (int col = 0; col < 3; col++) {
-            for (int height = 0; height < board[col]; height++) {
+        String k = key(h);
 
-                int[] newBoard = board.clone();
+        // return memoized result if already computed
+        if (memo.containsKey(k))
+            return memo.get(k);
 
-                // simulate chomp
-                for (int i = col; i < 3; i++) {
-                    newBoard[i] = Math.min(newBoard[i], height);
-                }
+        // check if this is a poison-only position
+        // (only column 0 has height 1, everything else is 0)
+        boolean poisonOnly = (h[0] == 1);
 
-                int n1 = newBoard[0];
-                int n2 = newBoard[1];
-                int n3 = newBoard[2];
+        for (int i = 1; i < h.length; i++) {
 
-                if (n1 >= n2 && n2 >= n3) {
-
-                    String nextKey = n1 + "." + n2 + "." + n3;
-
-                    Boolean result = boardResults.get(nextKey);
-
-                    // classify move quality
-                    String type =
-                            (result != null && result == false)
-                                    ? "LOSING move (good)"
-                                    : "winning move";
-
-                    System.out.println(
-                            "  Move (" + col + "," + height + ") -> "
-                                    + nextKey + " : " + type
-                    );
-                }
-            }
+            if (h[i] != 0)
+                poisonOnly = false;
         }
-    }
 
-    // ---------------- SOLVER MOVE CHOICE ----------------
-    // Chooses best move using perfect play
-    public static Move chooseMove(int c1, int c2, int c3) {
+        // poison-only means losing position
+        if (poisonOnly) {
 
-        int[] board = {c1, c2, c3};
+            memo.put(k, true);
+            return true;
+        }
 
-        Move best = null;
-        int maxCookies = -1;
 
-        for (int col = 0; col < 3; col++) {
-            for (int height = 0; height < board[col]; height++) {
+        // try all possible moves
+        for (int col = 0; col < h.length; col++) {
 
-                int[] newBoard = board.clone();
+            for (int row = 0; row < h[col]; row++) {
 
-                // simulate chomp
-                for (int i = col; i < 3; i++) {
-                    newBoard[i] = Math.min(newBoard[i], height);
-                }
-
-                int n1 = newBoard[0];
-                int n2 = newBoard[1];
-                int n3 = newBoard[2];
-
-                if (!(n1 >= n2 && n2 >= n3))
+                // skip poison square (0,0)
+                if (row == 0 && col == 0)
                     continue;
 
-                String nextKey = n1 + "." + n2 + "." + n3;
+                int[] next = simulateMove(h, row, col);
 
-                Boolean result = boardResults.get(nextKey);
+                // if we can force opponent into losing position, this is winning
+                if (isLosingPosition(next)) {
 
-                int cookies = n1 + n2 + n3;
-
-                // PERFECT STRATEGY:
-                // immediately choose move that forces loss
-                if (result != null && result == false) {
-                    return new Move(col, height, nextKey);
-                }
-
-                // fallback strategy:
-                // delay loss as long as possible
-                if (cookies > maxCookies) {
-                    maxCookies = cookies;
-                    best = new Move(col, height, nextKey);
+                    memo.put(k, false);
+                    return false;
                 }
             }
         }
 
-        return best;
+        // no winning moves found
+        memo.put(k, true);
+        return true;
+    }
+
+
+    // find a winning move (if one exists)
+    public int[] findWinningMove(int[] h) {
+
+        // test every possible move
+        for (int col = 0; col < h.length; col++) {
+
+            for (int row = 0; row < h[col]; row++) {
+
+                // skip poison square
+                if (row == 0 && col == 0)
+                    continue;
+
+                int[] next = simulateMove(h, row, col);
+
+                // if opponent is in losing position, this move wins
+                if (isLosingPosition(next))
+                    return new int[]{row, col};
+            }
+        }
+
+        // no winning move exists
+        return null;
     }
 }

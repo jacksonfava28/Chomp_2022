@@ -3,24 +3,29 @@ import java.util.Arrays;
 
 public class MyPlayer {
 
+    public MyChomp solver = new MyChomp();
 
-      // MAIN MOVE FUNCTION (CALLED BY GAME)
 
+    // main AI move
     public Point move(Chip[][] board) {
 
+        // convert board into height array
         int[] heights = computeHeights(board);
 
         System.out.println("Heights: " + Arrays.toString(heights));
-        printHeights(heights);
 
-        Point winningMove = findWinningMove(heights);
+        // try to find a winning move using solver
+        int[] move = solver.findWinningMove(heights);
 
-        if (winningMove != null) {
+        if (move != null) {
+
             System.out.println("Winning move -> "
-                    + winningMove.x + "," + winningMove.y);
-            return winningMove;
+                    + move[0] + "," + move[1]);
+
+            return new Point(move[0], move[1]);
         }
 
+        // otherwise use fallback strategy
         Point fallback = fallbackMove(heights);
 
         System.out.println("Fallback move -> "
@@ -30,139 +35,44 @@ public class MyPlayer {
     }
 
 
-      // CONVERT GUI BOARD → HEIGHTS
-
+    // convert board into column heights
     private int[] computeHeights(Chip[][] board) {
 
         int rows = board.length;
         int cols = board[0].length;
 
-        int[] heights = new int[rows];
+        int[] heights = new int[cols];
 
-        for (int r = 0; r < rows; r++) {
+        for (int c = 0; c < cols; c++) {
 
             int count = 0;
 
-            for (int c = 0; c < cols; c++) {
+            for (int r = 0; r < rows; r++) {
+
+                // count only live chips in this column
                 if (board[r][c] != null &&
                         board[r][c].isAlive)
                     count++;
             }
 
-            heights[r] = count;
+            heights[c] = count;
         }
 
         return heights;
     }
 
 
-
-     //  FIND WINNING MOVE
-
-    private Point findWinningMove(int[] heights) {
-
-        for (int r = 0; r < heights.length; r++) {
-
-            for (int c = 0; c < heights[r]; c++) {
-
-                // never eat poison
-                if (r == 0 && c == 0)
-                    continue;
-
-                int[] next = simulateMove(heights, r, c);
-
-                System.out.println(
-                        "Try move " + r + "," + c +
-                                " -> " + Arrays.toString(next));
-
-                if (isLosingPosition(next))
-                    return new Point(r, c);
-            }
-        }
-
-        return null;
-    }
-
-
-
-      // SIMULATE CHOMP MOVE
-
-    private int[] simulateMove(int[] heights, int r, int c) {
-
-        int[] copy = heights.clone();
-
-        for (int i = r; i < copy.length; i++) {
-            copy[i] = Math.min(copy[i], c);
-        }
-
-        return copy;
-    }
-
-
-
-    //   LOSING POSITION CHECK
-
-    private boolean isLosingPosition(int[] heights) {
-
-        // poison only
-        if (heights[0] == 1) {
-            boolean empty = true;
-
-            for (int i = 1; i < heights.length; i++)
-                if (heights[i] != 0)
-                    empty = false;
-
-            if (empty)
-                return true;
-        }
-
-        // opponent has winning reply?
-        for (int r = 0; r < heights.length; r++) {
-
-            for (int c = 0; c < heights[r]; c++) {
-
-                if (r == 0 && c == 0)
-                    continue;
-
-                int[] next = simulateMove(heights, r, c);
-
-                if (isLosingPosition(next))
-                    return false;
-            }
-        }
-
-        return true;
-    }
-
-
-
-      // SAFE FALLBACK MOVE
-
+    // fallback move if no winning move found
     private Point fallbackMove(int[] heights) {
 
-        for (int r = heights.length - 1; r >= 0; r--) {
-            if (heights[r] > 0)
-                return new Point(r, heights[r] - 1);
+        // pick rightmost non-empty column
+        for (int c = heights.length - 1; c >= 0; c--) {
+
+            if (heights[c] > 0)
+                return new Point(heights[c] - 1, c);
         }
 
+        // default move (should rarely happen)
         return new Point(1,1);
-    }
-
-
-
-       //PRINT CHEAT SHEET FORMAT
-
-    private void printHeights(int[] heights) {
-
-        StringBuilder sb = new StringBuilder();
-
-        for (int i = 0; i < heights.length; i++) {
-            sb.append(heights[i]);
-
-            if (i < heights.length - 1)
-                sb.append(".");
-        }
-
-        System.out.println(sb.toString());
     }
 }
